@@ -194,4 +194,4 @@ Docker has no Vercel size or memory limits, so heavier models are possible here.
 
 ## Contributing and license
 
-See CONTRIBUTING.md. ChruBG is licensed under AGPL-3.0, see LICENSE. Models have their own licenses.
+See [CONTRIBUTING.md](CONTRIBUTING.md). ChruBG is licensed under AGPL-3.0, see [LICENSE](LICENSE). Models have their own licenses.
