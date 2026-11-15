@@ -4,7 +4,8 @@
   "functions": {
     "api/remove_background.py": {
       "maxDuration": 60,
-      "includeFiles": "models/**"
+      "includeFiles": "models/**",
+      "excludeFiles": "{public/**,tests/**,.github/**,scripts/**,local_server.py,Dockerfile,*.md}"
     }
   }
 }

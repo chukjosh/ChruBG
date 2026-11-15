@@ -13,4 +13,4 @@ RUN python3 scripts/download_model.py
 
 ENV PORT=8000
 EXPOSE 8000
-CMD ["python3", "server.py"]
+CMD ["python3", "local_server.py"]

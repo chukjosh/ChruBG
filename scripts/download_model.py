@@ -1,7 +1,7 @@
 """Downloads models. Server models go to models/, in-browser models go to public/models/.
 
 Runs automatically at build time (see buildCommand in vercel.json).
-Run it by hand before using `vercel dev` or server.py.
+Run it by hand before using `vercel dev` or local_server.py.
 
 Example: ENABLED_MODELS=isnet-general-use,silueta BROWSER_MODELS=silueta python3 scripts/download_model.py
 """

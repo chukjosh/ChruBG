@@ -18,7 +18,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python scripts/download_model.py
-python server.py
+python local_server.py
 ```
 
 If PowerShell refuses to run the activate script, run `Set-ExecutionPolicy -Scope Process RemoteSigned` first and try again.
@@ -31,7 +31,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 scripts/download_model.py
-python3 server.py
+python3 local_server.py
 ```
 
 Then open **http://localhost:8000** in your browser. Press Ctrl+C in the terminal to stop it.
@@ -140,7 +140,7 @@ divide by the standard deviation. A model that expects different preprocessing n
 (`api/remove_background.py`) and `public/browser-engine.js`. Check the model's license before sharing it publicly.
 
 **Where your file must be:**
-- **Locally or with `server.py`:** just keep it in `models/`.
+- **Locally or with `local_server.py`:** just keep it in `models/`.
 - **Vercel:** `models/` is git-ignored, so either commit the file (GitHub rejects files over 100 MB, so large models need Git LFS) or host it elsewhere and give the registry entry a `download_url` so the build fetches it.
 - **Docker:** the image build only downloads built in models, and `models/` is excluded from the image. Mount your folder instead:
   `docker run -p 8000:8000 -v "$(pwd)/models:/app/models" -e ENABLED_MODELS=my-model chrubg`
@@ -170,12 +170,36 @@ or anyone who does not want requests to third parties, can self-host these files
 ## Deploy on Vercel
 
 1. Push this folder to GitHub (models are downloaded at build time and git-ignored).
-2. Import the repo in Vercel with no framework preset.
-3. Optional environment variables: `ENABLED_MODELS`, `BROWSER_MODELS`, `RATE_LIMIT_PER_MINUTE` (default 30, 0 turns it off).
-4. Deploy. The build runs `scripts/download_model.py`.
+2. In Vercel, choose **Add New, Project**, then import the repo.
+3. On the configure screen, use these settings:
 
+| Setting | Value |
+| --- | --- |
+| Root Directory | `./` (leave as is) |
+| Application Preset | **Other**. Do not pick Python, which expects a Python web framework app |
+| Build Command | Leave blank. `vercel.json` sets it to `python3 scripts/download_model.py` |
+| Output Directory | Leave blank. `vercel.json` sets it to `public` |
+| Install Command | Leave blank |
+| Run or Start command | None. Vercel has no run command for this kind of project |
+
+Settings in `vercel.json` take priority over the dashboard fields.
+
+4. Environment variables are optional. If you set any, tick **Production** and **Preview**, because the build reads them to decide which models to download:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `ENABLED_MODELS` | `isnet-general-use` | Models the server offers. The first is the default |
+| `BROWSER_MODELS` | `silueta` | Models people can choose to run in their own browser. Empty turns it off |
+| `RATE_LIMIT_PER_MINUTE` | `30` | Requests per client per minute. `0` turns it off |
+
+5. Click **Deploy** and watch the build log. The build downloads the models, so the first build takes a little longer.
+
+Changing an environment variable later needs a redeploy.
 The built in rate limit is best effort, because each serverless instance counts separately.
 For a hard limit, add a rate limiting rule in the Vercel Firewall settings.
+
+**If the build fails:** an error about a Python "entrypoint" means the preset is set to Python, so switch it to Other.
+If the function is too large or runs out of memory, set `ENABLED_MODELS=silueta`.
 
 ## Run with Docker
 

@@ -9,7 +9,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 ENABLED_MODELS=u2netp python3 scripts/download_model.py
 ENABLED_MODELS=u2netp python3 -m pytest tests
 node --test tests/*.test.js
-python3 server.py   # http://localhost:8000
+python3 local_server.py   # http://localhost:8000
 ```
 
 ## Guidelines
