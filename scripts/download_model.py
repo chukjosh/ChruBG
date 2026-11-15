@@ -43,3 +43,26 @@ for identifier in get_requested_model_identifiers():
     download_model(identifier, os.path.join(PROJECT_ROOT_DIRECTORY, "models"))
 for identifier in get_browser_model_identifiers():
     download_model(identifier, os.path.join(PROJECT_ROOT_DIRECTORY, "public", "models"))
+
+
+# Vercel functions have a size limit, and the Python packages already use most of it.
+# Warn in the build log, instead of letting the build fail later with a less clear error.
+STANDARD_VERCEL_MODEL_BUDGET_IN_MEGABYTES = 35
+
+
+def warn_if_server_models_may_not_fit_on_vercel():
+    if not os.environ.get("VERCEL") or os.environ.get("VERCEL_SUPPORT_LARGE_FUNCTIONS") == "1":
+        return
+    total_megabytes = sum(
+        os.path.getsize(os.path.join(PROJECT_ROOT_DIRECTORY, "models", f"{identifier}.onnx"))
+        for identifier in get_requested_model_identifiers()
+    ) / 1_000_000
+    if total_megabytes > STANDARD_VERCEL_MODEL_BUDGET_IN_MEGABYTES:
+        print(
+            f"WARNING: the server models total {total_megabytes:.0f} MB. This will probably fail with LAMBDA_SIZE_EXCEEDED "
+            "on a standard Vercel function. Fix it with ENABLED_MODELS=u2netp, or ENABLED_MODELS=none to use in-browser mode only, "
+            "or enable large functions with VERCEL_SUPPORT_LARGE_FUNCTIONS=1. See the README."
+        )
+
+
+warn_if_server_models_may_not_fit_on_vercel()

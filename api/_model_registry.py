@@ -9,6 +9,13 @@ The file name starts with an underscore so Vercel does not expose it as an endpo
 """
 import os
 
+
+def parse_model_list(comma_separated_names):
+    """Turns 'a,b' into ['a', 'b']. The word 'none' or an empty value gives an empty list."""
+    names = [name.strip() for name in comma_separated_names.split(",") if name.strip()]
+    return [name for name in names if name.lower() != "none"]
+
+
 RELEASES_BASE_URL = "https://github.com/danielgatis/rembg/releases/download/v0.0.0"
 
 MODEL_REGISTRY = {
@@ -45,7 +52,7 @@ DEFAULT_ENABLED_MODELS = "isnet-general-use"
 def get_requested_model_identifiers():
     """Reads ENABLED_MODELS, a comma separated list such as 'isnet-general-use,silueta'."""
     requested_models = os.environ.get("ENABLED_MODELS", DEFAULT_ENABLED_MODELS)
-    return [name.strip() for name in requested_models.split(",") if name.strip()]
+    return parse_model_list(requested_models)
 
 # Models that visitors may choose to run inside their own browser. Served as static files.
 DEFAULT_BROWSER_MODELS = "silueta"
@@ -54,4 +61,4 @@ DEFAULT_BROWSER_MODELS = "silueta"
 def get_browser_model_identifiers():
     """Reads BROWSER_MODELS. Set it to an empty value to turn in-browser processing off."""
     requested_models = os.environ.get("BROWSER_MODELS", DEFAULT_BROWSER_MODELS)
-    return [name.strip() for name in requested_models.split(",") if name.strip()]
+    return parse_model_list(requested_models)

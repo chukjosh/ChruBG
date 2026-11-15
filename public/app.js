@@ -64,7 +64,8 @@ function showModelChoices() {
   locationRadios.forEach((radio) => (radio.checked = radio.value === processingLocation));
   locationChoice.hidden = !canChooseLocation;
   modelRow.hidden = models.length < 2;
-  modelPicker.hidden = !canChooseLocation && models.length < 2;
+  // In-browser only setups still show the picker, so people see the privacy and download note
+  modelPicker.hidden = !canChooseLocation && models.length < 2 && processingLocation !== "browser";
   showSelectedModelDescription();
 }
 

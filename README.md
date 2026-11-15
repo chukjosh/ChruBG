@@ -50,7 +50,7 @@ Set the variables before the download step and again before starting the server.
 | Command Prompt | `set ENABLED_MODELS=isnet-general-use,silueta` then `set BROWSER_MODELS=silueta` |
 | macOS and Linux | `export ENABLED_MODELS=isnet-general-use,silueta` then `export BROWSER_MODELS=silueta` |
 
-For a lighter setup, use `ENABLED_MODELS=silueta` or `u2netp`. To turn in-browser mode off, set `BROWSER_MODELS` to an empty value.
+For a lighter setup, use `ENABLED_MODELS=silueta` or `u2netp`. To turn in-browser mode off, set `BROWSER_MODELS` to `none`.
 Your own model files are covered under "Using your own model" below.
 
 ### Run the tests
@@ -91,6 +91,46 @@ You can also use the Vercel CLI to mimic the hosted setup (`vercel dev`, after t
 - Choose a model when more than one is enabled.
 - Optional in-browser mode: people can choose to process images on their own device. It is never used unless they pick it.
 
+## Project structure
+
+```text
+ChruBG/
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # Runs the tests on every push
+├── api/
+│   ├── _model_registry.py     # Model settings, download links and the ENABLED_MODELS lists
+│   └── remove_background.py   # The background removal function, the only server code
+├── public/
+│   ├── app.js                 # Main page logic: images, cards, model picker
+│   ├── browser-engine.js      # Optional in-browser processing
+│   ├── crop-editor.js         # Crop and resize editor
+│   ├── crop-math.js           # Crop geometry, also covered by tests
+│   ├── editor.js              # Touch up brush
+│   ├── export.js              # Downloads, backgrounds, trim and ZIP
+│   ├── index.html             # The page
+│   ├── styles.css             # Styles, including dark mode and mobile
+│   ├── theme.js               # Light and dark theme switch
+│   └── tour.js                # First visit walkthrough
+├── scripts/
+│   └── download_model.py      # Downloads the models, also runs at build time on Vercel
+├── tests/
+│   ├── crop-math.test.js      # Tests for the crop geometry
+│   └── test_api.py            # Tests for the API
+├── .dockerignore              # Files Docker leaves out of the image
+├── .gitignore                 # Keeps downloaded models out of Git
+├── CONTRIBUTING.md            # How to contribute
+├── Dockerfile                 # Builds a self-contained image
+├── LICENSE                    # AGPL-3.0 license text
+├── README.md                  # This file
+├── local_server.py            # Runs the page and API together on your computer or in Docker
+├── requirements-dev.txt       # Test tools
+├── requirements.txt           # Python packages the server needs
+└── vercel.json                # Build command, output folder and function settings for Vercel
+```
+
+`models/` and `public/models/` are created by `scripts/download_model.py` and are not part of the repo.
+
 ## Privacy
 
 Images are held in memory only: in the browser tab, and in the server function for the length of one request.
@@ -110,6 +150,7 @@ When more than one is enabled, the page shows a model picker.
 | `u2netp` | Smallest and fastest, lowest detail |
 
 A hosted instance should enable one or two light models. Self-hosters can enable whatever their hardware handles.
+On Vercel's standard function size limit only `u2netp` fits. See "Function size limit on Vercel" below.
 To add a model, add an entry to `api/_model_registry.py`. Check each model's license before offering it publicly.
 
 ## Using your own model
@@ -141,13 +182,13 @@ divide by the standard deviation. A model that expects different preprocessing n
 
 **Where your file must be:**
 - **Locally or with `local_server.py`:** just keep it in `models/`.
-- **Vercel:** `models/` is git-ignored, so either commit the file (GitHub rejects files over 100 MB, so large models need Git LFS) or host it elsewhere and give the registry entry a `download_url` so the build fetches it.
+- **Vercel:** `models/` is git-ignored, so either commit the file (GitHub rejects files over 100 MB, so large models need Git LFS) or host it elsewhere and give the registry entry a `download_url` so the build fetches it. The file also counts toward the function size limit, see "Function size limit on Vercel".
 - **Docker:** the image build only downloads built in models, and `models/` is excluded from the image. Mount your folder instead:
   `docker run -p 8000:8000 -v "$(pwd)/models:/app/models" -e ENABLED_MODELS=my-model chrubg`
 
 ## In-browser mode
 
-Set `BROWSER_MODELS` (default `silueta`, empty turns it off) to offer models that run on the visitor's device.
+Set `BROWSER_MODELS` (default `silueta`, `none` turns it off) to offer models that run on the visitor's device.
 The build downloads them into `public/models/` and serves them as static files. The page shows a
 "Process: On the server / In your browser" switch, and the server stays the default.
 The model downloads to the browser the first time it is used, and older phones will be slower.
@@ -188,8 +229,8 @@ Settings in `vercel.json` take priority over the dashboard fields.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `ENABLED_MODELS` | `isnet-general-use` | Models the server offers. The first is the default |
-| `BROWSER_MODELS` | `silueta` | Models people can choose to run in their own browser. Empty turns it off |
+| `ENABLED_MODELS` | `isnet-general-use` | Models the server offers. The first is the default. `none` means no server model |
+| `BROWSER_MODELS` | `silueta` | Models people can choose to run in their own browser. `none` turns it off |
 | `RATE_LIMIT_PER_MINUTE` | `30` | Requests per client per minute. `0` turns it off |
 
 5. Click **Deploy** and watch the build log. The build downloads the models, so the first build takes a little longer.
@@ -198,8 +239,22 @@ Changing an environment variable later needs a redeploy.
 The built in rate limit is best effort, because each serverless instance counts separately.
 For a hard limit, add a rate limiting rule in the Vercel Firewall settings.
 
-**If the build fails:** an error about a Python "entrypoint" means the preset is set to Python, so switch it to Other.
-If the function is too large or runs out of memory, set `ENABLED_MODELS=silueta`.
+### Function size limit on Vercel
+
+The server function has a size limit, and the Python packages alone use about 185 MB of it.
+Vercel's docs list 500 MB for Python functions, but a build of this project in November 2026 enforced **225 MB**
+and failed with `LAMBDA_SIZE_EXCEEDED` when `isnet-general-use` (179 MB) was bundled. Pick one of these:
+
+| Option | Settings | Trade-off |
+| --- | --- | --- |
+| 1. Large functions (beta) | Add the environment variable `VERCEL_SUPPORT_LARGE_FUNCTIONS` = `1`, then redeploy | Keeps the best model. It is a beta feature and needs Fluid compute with Active CPU, which Vercel enables by default for new projects |
+| 2. A small server model | `ENABLED_MODELS` = `u2netp` | Fits, at roughly 190 MB in total, but has the lowest detail. `silueta` (44 MB) is too big for the standard limit by a few MB |
+| 3. In-browser only | `ENABLED_MODELS` = `none`, and keep `BROWSER_MODELS` = `silueta` | No server model at all. The page uses "In your browser" automatically, so images are processed on visitors' devices |
+
+To see what takes up the space, add `VERCEL_ANALYZE_BUILD_OUTPUT` = `1` and redeploy. The build log then lists the largest files.
+The memory limit is separate: Hobby functions get 2 GB, and `isnet-general-use` needs about 1.6 GB.
+
+**Other build problems:** an error about a Python "entrypoint" means the preset is set to Python, so switch it to Other.
 
 ## Run with Docker
 
