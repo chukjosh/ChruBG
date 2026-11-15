@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChruBG, remove image backgrounds</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Remove the background from any image and download a transparent PNG.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/">ChruBG</a>
+    <div class="header-actions">
+      <button type="button" class="text-button" id="tour-button">Take the tour</button>
+      <button type="button" class="theme-toggle" id="theme-toggle" title="Switch between automatic, light and dark" aria-label="Change colour theme">Theme: Auto</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <h1>Remove image backgrounds in seconds</h1>
+      <p class="lead">Add one image or many. Your results stay in this tab until you remove them or close it.</p>
+    </section>
+
+    <section class="uploader">
+      <button type="button" class="dropzone" id="dropzone">
+        <span class="dropzone-title">Drop images here</span>
+        <span class="dropzone-hint">Or paste, or click to choose. PNG, JPG or WebP.</span>
+      </button>
+      <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp" multiple hidden>
+
+      <div class="model-picker" id="model-picker" hidden>
+        <div class="segmented-field" id="location-choice" role="radiogroup" aria-label="Where to process images" hidden>
+          <span class="field-label">Process</span>
+          <div class="segmented">
+            <label><input type="radio" name="processing-location" value="server" checked><span>On the server</span></label>
+            <label><input type="radio" name="processing-location" value="browser"><span>In your browser</span></label>
+          </div>
+        </div>
+        <div class="model-row" id="model-row">
+          <label for="model-select">Model</label>
+          <select id="model-select"></select>
+        </div>
+        <p class="model-description" id="model-description"></p>
+      </div>
+    </section>
+
+    <p class="notice" id="notice" role="status"></p>
+
+    <section class="results" id="results" hidden>
+      <div class="results-header">
+        <h2 id="results-title">Your images</h2>
+        <button type="button" class="text-button" id="clear-all-button">Clear all</button>
+      </div>
+      <p class="hint">Drag the pink line to compare before and after. Use Touch up to fix any spots the model got wrong.</p>
+      <div class="export-toolbar">
+        <fieldset class="swatches">
+          <legend>Background</legend>
+          <button type="button" class="swatch swatch-transparent is-selected" data-color="transparent" aria-label="Transparent"></button>
+          <button type="button" class="swatch" data-color="#ffffff" style="--swatch:#ffffff" aria-label="White"></button>
+          <button type="button" class="swatch" data-color="#000000" style="--swatch:#000000" aria-label="Black"></button>
+          <input type="color" id="custom-color" value="#2e45f5" aria-label="Custom colour">
+        </fieldset>
+        <label>Format
+          <select id="format-select"><option value="png">PNG</option><option value="jpeg">JPG</option></select>
+        </label>
+        <label>Size
+          <select id="size-select">
+            <option value="full">Full image</option>
+            <option value="trim">Trim to subject</option>
+            <option value="square">Square, subject centred</option>
+          </select>
+        </label>
+        <button type="button" class="button button-secondary button-small" id="download-all-button">Download all (ZIP)</button>
+      </div>
+      <ul class="results-grid" id="results-grid"></ul>
+    </section>
+  </main>
+
+  <template id="card-template">
+    <li class="card" data-status="preparing">
+      <div class="compare">
+        <img class="compare-cutout" alt="Image with the background removed">
+        <img class="compare-original" alt="Original image">
+        <span class="compare-label compare-label-left">Original</span>
+        <span class="compare-label compare-label-right">Cutout</span>
+        <input class="compare-slider" type="range" min="0" max="100" value="50" aria-label="Compare original and cutout">
+        <div class="cutline" aria-hidden="true"><span class="cutline-grip"></span></div>
+        <div class="card-overlay"><p class="card-overlay-text"></p></div>
+      </div>
+      <div class="card-footer">
+        <div class="card-meta">
+          <p class="card-name"></p>
+          <p class="card-model"></p>
+        </div>
+        <div class="card-actions">
+          <button type="button" class="button button-primary button-small download-link">Download</button>
+          <button type="button" class="button button-secondary button-small edit-button">Touch up</button>
+          <button type="button" class="button button-secondary button-small crop-button">Crop and resize</button>
+          <button type="button" class="button button-secondary button-small retry-button">Try again</button>
+          <button type="button" class="text-button remove-button">Remove</button>
+        </div>
+      </div>
+    </li>
+  </template>
+
+  <dialog id="editor-dialog" aria-labelledby="editor-title">
+    <h2 id="editor-title">Touch up</h2>
+    <p class="editor-help">Paint over the image. <strong>Erase</strong> removes parts you want gone. <strong>Restore</strong> brings back parts that were removed by mistake, which show faded.</p>
+    <div class="editor-canvas-wrap"><canvas id="editor-canvas"></canvas></div>
+    <div class="editor-tools">
+      <div class="segmented" role="radiogroup" aria-label="Brush mode">
+        <label><input type="radio" name="brush-mode" value="erase" checked><span>Erase</span></label>
+        <label><input type="radio" name="brush-mode" value="restore"><span>Restore</span></label>
+      </div>
+      <label class="brush-size">Brush size <input type="range" id="brush-size" min="4" max="120" value="32"></label>
+      <button type="button" class="text-button" id="editor-undo">Undo</button>
+      <button type="button" class="text-button" id="editor-reset">Reset</button>
+    </div>
+    <div class="editor-actions">
+      <button type="button" class="button button-secondary button-small" id="editor-cancel">Cancel</button>
+      <button type="button" class="button button-primary button-small" id="editor-done">Apply</button>
+    </div>
+  </dialog>
+
+  <dialog id="crop-dialog" aria-labelledby="crop-title">
+    <h2 id="crop-title">Crop and resize</h2>
+    <p class="editor-help">Optional. Drag the image to position it, use Zoom to resize it inside the frame, then choose an output size. Images you do not crop download as usual. Rules for official photos differ by country, and some agencies reject replaced backgrounds, so check theirs before you submit.</p>
+    <div class="editor-canvas-wrap"><canvas id="crop-canvas"></canvas></div>
+    <div class="crop-controls">
+      <label>Size preset <select id="crop-preset"></select></label>
+      <label>Width (px) <input type="number" id="crop-width" min="16" max="4096" inputmode="numeric"></label>
+      <label>Height (px) <input type="number" id="crop-height" min="16" max="4096" inputmode="numeric"></label>
+      <label class="brush-size">Zoom <input type="range" id="crop-zoom" min="0.5" max="4" step="0.01" value="1"></label>
+    </div>
+    <div class="editor-tools">
+      <button type="button" class="text-button" id="crop-reset">Reset framing</button>
+      <button type="button" class="text-button" id="crop-apply-all">Use this size for all images</button>
+      <button type="button" class="text-button" id="crop-remove">Remove crop</button>
+    </div>
+    <div class="editor-actions">
+      <button type="button" class="button button-secondary button-small" id="crop-cancel">Cancel</button>
+      <button type="button" class="button button-primary button-small" id="crop-done">Apply</button>
+    </div>
+  </dialog>
+
+  <section class="tour" id="tour" role="dialog" aria-labelledby="tour-title" hidden>
+    <p class="tour-progress" id="tour-progress"></p>
+    <h2 id="tour-title"></h2>
+    <p id="tour-text"></p>
+    <div class="tour-actions">
+      <button type="button" class="text-button" id="tour-skip">Skip tour</button>
+      <span class="tour-nav">
+        <button type="button" class="button button-secondary button-small" id="tour-back">Back</button>
+        <button type="button" class="button button-primary button-small" id="tour-next">Next</button>
+      </span>
+    </div>
+  </section>
+
+  <script src="export.js"></script>
+  <script src="browser-engine.js"></script>
+  <script src="crop-math.js"></script>
+  <script src="crop-editor.js"></script>
+  <script src="editor.js"></script>
+  <script src="tour.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Download the small test model
+        run: ENABLED_MODELS=u2netp BROWSER_MODELS= python3 scripts/download_model.py
+      - name: Run API tests
+        run: ENABLED_MODELS=u2netp python3 -m pytest tests
+      - name: Run frontend tests
+        run: node --test tests/*.test.js
+      - name: Check JavaScript syntax
+        run: node --check public/app.js && node --check public/export.js && node --check public/browser-engine.js && node --check public/editor.js && node --check public/theme.js && node --check public/crop-math.js && node --check public/crop-editor.js && node --check public/tour.js

@@ -1,0 +1,10 @@
+{
+  "buildCommand": "python3 scripts/download_model.py",
+  "outputDirectory": "public",
+  "functions": {
+    "api/remove_background.py": {
+      "maxDuration": 60,
+      "includeFiles": "models/**"
+    }
+  }
+}
