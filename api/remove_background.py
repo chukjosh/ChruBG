@@ -9,6 +9,7 @@ Uses onnxruntime directly instead of the rembg package to keep the bundle small.
 import io
 import json
 import os
+import sys
 import time
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
@@ -17,6 +18,8 @@ import numpy as np
 import onnxruntime
 from PIL import Image
 
+# Vercel does not put this folder on the import path, so add it before importing the sibling module
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _model_registry import MODEL_REGISTRY, get_browser_model_identifiers, get_requested_model_identifiers
 
 PROJECT_ROOT_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
