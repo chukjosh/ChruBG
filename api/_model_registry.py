@@ -72,3 +72,29 @@ def get_browser_model_identifiers():
 def get_public_id(model_identifier):
     """The name visitors see in URLs and the API. It keeps the underlying model name out of the page."""
     return MODEL_REGISTRY.get(model_identifier, {}).get("public_id", model_identifier)
+
+
+# ---------- Video models ----------
+VIDEO_MODEL_REGISTRY = {
+    "rvm-mobilenetv3": {
+        "public_id": "flow",
+        "label": "Flow",
+        "description": "Built for video. Keeps edges steady from frame to frame.",
+        "download_url": "https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/rvm_mobilenetv3_fp32.onnx",
+    },
+}
+
+DEFAULT_ENABLED_VIDEO_MODELS = "rvm-mobilenetv3"  # runs on the local server, for self-hosted setups only
+DEFAULT_BROWSER_VIDEO_MODELS = "rvm-mobilenetv3"  # offered to run in the visitor's browser
+
+
+def get_enabled_video_model_identifiers():
+    return parse_model_list(os.environ.get("ENABLED_VIDEO_MODELS", DEFAULT_ENABLED_VIDEO_MODELS))
+
+
+def get_browser_video_model_identifiers():
+    return parse_model_list(os.environ.get("BROWSER_VIDEO_MODELS", DEFAULT_BROWSER_VIDEO_MODELS))
+
+
+def get_video_public_id(model_identifier):
+    return VIDEO_MODEL_REGISTRY.get(model_identifier, {}).get("public_id", model_identifier)

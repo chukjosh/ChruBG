@@ -5,7 +5,7 @@
     "api/remove_background.py": {
       "maxDuration": 60,
       "includeFiles": "models/**",
-      "excludeFiles": "{public/**,tests/**,.github/**,scripts/**,local_server.py,Dockerfile,*.md}"
+      "excludeFiles": "{public/**,tests/**,.github/**,scripts/**,local_server.py,local_video.py,Dockerfile,*.md}"
     }
   }
 }

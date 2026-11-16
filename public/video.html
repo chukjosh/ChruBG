@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChruBG, remove video backgrounds (beta)</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#2e45f5">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="description" content="Experimental video background removal that runs in your browser or on a local server.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/">
+      <img class="wordmark-icon" src="favicon.svg" alt="" width="28" height="28" aria-hidden="true">
+      <span>ChruBG</span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a class="nav-link" href="/">Images</a>
+      <a class="nav-link" aria-current="page" href="video.html" title="Video background removal, beta">Video <span class="badge">Beta</span></a>
+    </nav>
+    <div class="header-actions">
+      <button type="button" class="theme-toggle" id="theme-toggle" title="Switch between automatic, light and dark" aria-label="Change colour theme">Theme: Auto</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <h1>Remove video backgrounds <span class="badge badge-large">Beta</span></h1>
+      <p class="lead">Experimental. Works best with short clips of a person or object against a different background. Audio is not kept.</p>
+    </section>
+
+    <section class="uploader">
+      <button type="button" class="dropzone" id="video-dropzone" disabled>
+        <span class="dropzone-title">Drop a video here</span>
+        <span class="dropzone-hint" id="video-dropzone-hint">Checking what is available...</span>
+      </button>
+      <input type="file" id="video-input" accept="video/*" hidden>
+
+      <div class="model-picker" id="video-settings" hidden>
+        <div class="model-row">
+          <label for="video-engine">Process</label>
+          <select id="video-engine"></select>
+        </div>
+        <div class="model-row">
+          <label for="video-output">Output</label>
+          <select id="video-output"></select>
+        </div>
+        <div class="model-row" id="video-background-row">
+          <label for="video-background">Background</label>
+          <input type="color" id="video-background" value="#00ff00">
+        </div>
+        <p class="model-description" id="video-engine-note"></p>
+      </div>
+    </section>
+
+    <p class="notice" id="video-notice" role="status"></p>
+
+    <section class="video-job" id="video-job" hidden>
+      <p id="video-status"></p>
+      <progress id="video-progress" max="100"></progress>
+      <video id="video-result" controls playsinline hidden></video>
+      <div class="video-actions">
+        <button type="button" class="button button-secondary button-small" id="video-cancel">Cancel</button>
+        <button type="button" class="button button-primary button-small" id="video-download" hidden>Download</button>
+        <button type="button" class="button button-secondary button-small" id="video-restart" hidden>Process another video</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="browser-engine.js"></script>
+  <script src="video.js"></script>
+</body>
+</html>

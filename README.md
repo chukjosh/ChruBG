@@ -37,7 +37,7 @@ python3 local_server.py
 Then open **http://localhost:8000** in your browser. Press Ctrl+C in the terminal to stop it.
 
 With no settings, the download step fetches the three server models (Studio about 179 MB, Swift about 44 MB, Spark about 5 MB)
-and a copy of Swift for the browser (about 44 MB). It only downloads files that are missing, so later runs start straight away.
+and a copy of Swift for the browser (about 44 MB). It also fetches the video model Flow (about 15 MB, once for the local server and once for the browser). It only downloads files that are missing, so later runs start straight away.
 Your images are processed on your own computer and are not saved anywhere.
 
 ### Choosing other models locally
@@ -89,6 +89,7 @@ You can also use the Vercel CLI to mimic the hosted setup (`vercel dev`, after t
 - A short, skippable tour on the first visit, which you can reopen from the header.
 - Touch up brush: erase leftovers or restore parts the model removed by mistake.
 - Choose a model when more than one is enabled.
+- Video background removal (beta), from the Video link in the header. See "Video background removal" below.
 - Optional in-browser mode: people can choose to process images on their own device. It is never used unless they pick it.
 
 ## Project structure
@@ -114,12 +115,15 @@ ChruBG/
 │   ├── index.html             # The page
 │   ├── styles.css             # Styles, including dark mode and mobile
 │   ├── theme.js               # Light and dark theme switch
-│   └── tour.js                # First visit walkthrough
+│   ├── tour.js                # First visit walkthrough
+│   ├── video.html             # Video page (beta)
+│   └── video.js               # Video page logic and the in-browser video engine
 ├── scripts/
 │   └── download_model.py      # Downloads the models, also runs at build time on Vercel
 ├── tests/
 │   ├── crop-math.test.js      # Tests for the crop geometry
-│   └── test_api.py            # Tests for the API
+│   ├── test_api.py            # Tests for the API
+│   └── test_video.py          # Tests for local video
 ├── .dockerignore              # Files Docker leaves out of the image
 ├── .gitignore                 # Keeps downloaded models out of Git
 ├── CONTRIBUTING.md            # How to contribute
@@ -127,6 +131,7 @@ ChruBG/
 ├── LICENSE                    # AGPL-3.0 license text
 ├── README.md                  # This file
 ├── local_server.py            # Runs the page and API together on your computer or in Docker
+├── local_video.py             # Local video engine (needs ffmpeg), not deployed on Vercel
 ├── requirements-dev.txt       # Test tools
 ├── requirements.txt           # Python packages the server needs
 └── vercel.json                # Build command, output folder and function settings for Vercel
@@ -137,7 +142,7 @@ ChruBG/
 ## Privacy
 
 Images are held in memory only: in the browser tab, and in the server function for the length of one request.
-Images are never written to disk, a database or browser storage. Only two small preferences are kept: your theme choice (sessionStorage, this tab only) and whether you have seen the tour (localStorage). Closing or refreshing the tab clears all results.
+Images are never written to disk, a database or browser storage. The one exception is local video mode, which saves the video to a temporary folder while it is processed and then deletes it. Only two small preferences are kept: your theme choice (sessionStorage, this tab only) and whether you have seen the tour (localStorage). Closing or refreshing the tab clears all results.
 With the default server mode, images are sent to the server to be processed. With "In your browser", they never leave the device.
 The page also loads some resources from third parties, listed under "What is not in the repo" below.
 
@@ -201,6 +206,36 @@ Set `BROWSER_MODELS` (default `silueta`, `none` turns it off) to offer models th
 The build downloads them into `public/models/` and serves them as static files. The page shows a
 "Process: On the server / In your browser" switch, and the server stays the default.
 The model downloads to the browser the first time it is used, and older phones will be slower.
+
+## Video background removal (beta)
+
+The **Video** link in the header opens an experimental page for removing the background from short clips.
+It uses a model named **Flow**, which is built for video: it remembers the previous frames, so edges stay steadier than
+cutting out each frame as a separate image.
+
+**Which engine runs it.** The page checks what is available and only shows the choices that exist, in the **Process** menu:
+
+| Choice | Appears when | Notes |
+| --- | --- | --- |
+| In your browser | The video model file is present on the site (the default setup) | Nothing is uploaded. Clips up to 15 seconds. Slow on phones. The model (about 15 MB) downloads the first time. This is the default choice |
+| Local server | The page is served by `local_server.py` or Docker, ffmpeg is installed, and the video model is in `models/` | Faster, clips up to 60 seconds by default. Not available on Vercel, so the menu is hidden there |
+
+**Outputs.** In the browser: a video with a solid background (WebM, or MP4 where the browser records it) or a ZIP of transparent PNG frames.
+On the local server: an MP4 with a solid background or a transparent WebM. Audio is not kept.
+
+**Install ffmpeg for the local server.** Windows: `winget install Gyan.FFmpeg`. macOS: `brew install ffmpeg`. Ubuntu: `sudo apt install ffmpeg`.
+The Docker image already includes it. Restart the terminal after installing, then run `python scripts/download_model.py` and `python local_server.py`.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `ENABLED_VIDEO_MODELS` | `rvm-mobilenetv3` | Video model for the local server. `none` turns local video off |
+| `BROWSER_VIDEO_MODELS` | `rvm-mobilenetv3` | Video model offered to browsers. `none` turns browser video off |
+| `MAXIMUM_VIDEO_SECONDS` | `60` | Longest clip the local server accepts |
+| `MAXIMUM_VIDEO_UPLOAD_MEGABYTES` | `200` | Largest upload the local server accepts |
+| `MAXIMUM_VIDEO_SIDE_IN_PIXELS` | `960` | Videos are shrunk to this size before processing |
+
+**Limits.** This is a beta. Results depend on the footage: a clear subject against a different background works best.
+Very fast motion, hair and thin objects can show flicker or soft edges.
 
 ## What is not in the repo
 
@@ -287,7 +322,8 @@ ChruBG shows its models under friendly names, but the research and weights behin
 
 - **Studio** is the IS-Net general use model from the DIS project (Xuebin Qin and colleagues).
 - **Swift** and **Spark** come from the U²-Net family (Xuebin Qin and colleagues), as the Silueta and U2-Net-P variants.
-- The ONNX files are the ones published by the [rembg](https://github.com/danielgatis/rembg) project.
+- **Flow** is Robust Video Matting (Shanchuan Lin and colleagues), published under its own license (GPL-3.0 at the time of writing, check the project).
+- The image ONNX files are the ones published by the [rembg](https://github.com/danielgatis/rembg) project.
 
 Each model has its own license. Check it before offering a model publicly.
 
