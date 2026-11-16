@@ -13,15 +13,19 @@ PROJECT_ROOT_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(PROJECT_ROOT_DIRECTORY, "api"))
 from _model_registry import (  # noqa: E402
     MODEL_REGISTRY,
+    VIDEO_MODEL_REGISTRY,
+    get_browser_video_model_identifiers,
+    get_enabled_video_model_identifiers,
+    get_video_public_id,
     get_browser_model_identifiers,
     get_public_id,
     get_requested_model_identifiers,
 )
 
 
-def download_model(model_identifier, target_directory, file_name=None):
-    if model_identifier not in MODEL_REGISTRY:
-        sys.exit(f"Unknown model '{model_identifier}'. Choose from: {', '.join(MODEL_REGISTRY)}")
+def download_model(model_identifier, target_directory, file_name=None, registry=MODEL_REGISTRY):
+    if model_identifier not in registry:
+        sys.exit(f"Unknown model '{model_identifier}'. Choose from: {', '.join(registry)}")
 
     os.makedirs(target_directory, exist_ok=True)
     model_path = os.path.join(target_directory, f"{file_name or model_identifier}.onnx")
@@ -29,7 +33,7 @@ def download_model(model_identifier, target_directory, file_name=None):
         print(f"Already present: {model_path}")
         return
 
-    download_url = MODEL_REGISTRY[model_identifier].get("download_url")
+    download_url = registry[model_identifier].get("download_url")
     if not download_url:
         sys.exit(f"'{model_identifier}' is a custom model with no download_url. Place its file at {model_path} first.")
 
@@ -44,6 +48,13 @@ for identifier in get_requested_model_identifiers():
     download_model(identifier, os.path.join(PROJECT_ROOT_DIRECTORY, "models"))
 for identifier in get_browser_model_identifiers():
     download_model(identifier, os.path.join(PROJECT_ROOT_DIRECTORY, "public", "models"), get_public_id(identifier))
+
+# Video models. The local one is for self-hosted setups, so Vercel skips it.
+if not os.environ.get("VERCEL"):
+    for identifier in get_enabled_video_model_identifiers():
+        download_model(identifier, os.path.join(PROJECT_ROOT_DIRECTORY, "models"), registry=VIDEO_MODEL_REGISTRY)
+for identifier in get_browser_video_model_identifiers():
+    download_model(identifier, os.path.join(PROJECT_ROOT_DIRECTORY, "public", "models"), get_video_public_id(identifier), VIDEO_MODEL_REGISTRY)
 
 
 # Vercel functions have a size limit, and the Python packages already use most of it.
