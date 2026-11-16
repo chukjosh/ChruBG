@@ -6,11 +6,13 @@ POST /api/remove_background?model=<id>   raw image bytes in, transparent PNG out
 Images are read into memory, processed and discarded. Nothing is written to disk.
 Uses onnxruntime directly instead of the rembg package to keep the bundle small.
 """
+import gc
 import io
 import json
 import os
 import sys
 import time
+from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
@@ -20,7 +22,7 @@ from PIL import Image
 
 # Vercel does not put this folder on the import path, so add it before importing the sibling module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _model_registry import MODEL_REGISTRY, get_browser_model_identifiers, get_requested_model_identifiers
+from _model_registry import MODEL_REGISTRY, get_browser_model_identifiers, get_public_id, get_requested_model_identifiers
 
 PROJECT_ROOT_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 MAXIMUM_REQUEST_BYTES = 4_400_000  # Vercel rejects bodies above 4.5 MB
@@ -29,7 +31,10 @@ MAXIMUM_IMAGE_SIDE_IN_PIXELS = 1024
 RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "30"))  # 0 turns it off
 recent_request_times_by_client = {}
 
-cached_inference_sessions = {}
+# Loaded models use a lot of memory, so by default only the most recently used one stays loaded.
+# Switching models then costs a reload, but it keeps a 2 GB Vercel function from running out of memory.
+MAXIMUM_LOADED_MODELS = int(os.environ.get("MAXIMUM_LOADED_MODELS", "1"))
+cached_inference_sessions = OrderedDict()
 
 
 def is_rate_limited(client_identifier: str) -> bool:
@@ -65,11 +70,18 @@ def get_available_model_identifiers():
 
 
 def get_inference_session(model_identifier):
-    """Loads each model once per warm function instance."""
-    if model_identifier not in cached_inference_sessions:
-        cached_inference_sessions[model_identifier] = onnxruntime.InferenceSession(
-            get_model_path(model_identifier), providers=["CPUExecutionProvider"]
-        )
+    """Loads a model, keeping at most MAXIMUM_LOADED_MODELS in memory and dropping the least recently used."""
+    if model_identifier in cached_inference_sessions:
+        cached_inference_sessions.move_to_end(model_identifier)
+        return cached_inference_sessions[model_identifier]
+
+    while len(cached_inference_sessions) >= max(1, MAXIMUM_LOADED_MODELS):
+        cached_inference_sessions.popitem(last=False)
+        gc.collect()
+
+    cached_inference_sessions[model_identifier] = onnxruntime.InferenceSession(
+        get_model_path(model_identifier), providers=["CPUExecutionProvider"]
+    )
     return cached_inference_sessions[model_identifier]
 
 
@@ -106,13 +118,14 @@ def get_browser_models():
     """Models the visitor may choose to run in their own browser (static files under /models)."""
     return [
         {
-            "id": identifier,
+            "id": get_public_id(identifier),
             "label": MODEL_REGISTRY[identifier]["label"],
+            "badge": MODEL_REGISTRY[identifier].get("badge"),
             "description": MODEL_REGISTRY[identifier]["description"],
             "input_size": MODEL_REGISTRY[identifier]["input_size"],
             "mean": list(MODEL_REGISTRY[identifier]["mean"]),
             "standard_deviation": list(MODEL_REGISTRY[identifier]["standard_deviation"]),
-            "url": f"/models/{identifier}.onnx",
+            "url": f"/models/{get_public_id(identifier)}.onnx",
         }
         for identifier in get_browser_model_identifiers()
         if identifier in MODEL_REGISTRY
@@ -123,12 +136,13 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         available_identifiers = get_available_model_identifiers()
         self.send_json(200, {
-            "default": available_identifiers[0] if available_identifiers else None,
+            "default": get_public_id(available_identifiers[0]) if available_identifiers else None,
             "browser_models": get_browser_models(),
             "models": [
                 {
-                    "id": identifier,
+                    "id": get_public_id(identifier),
                     "label": MODEL_REGISTRY[identifier]["label"],
+                    "badge": MODEL_REGISTRY[identifier].get("badge"),
                     "description": MODEL_REGISTRY[identifier]["description"],
                 }
                 for identifier in available_identifiers
@@ -144,10 +158,12 @@ class handler(BaseHTTPRequestHandler):
         if not available_identifiers:
             return self.send_json(503, {"error": "No model is installed on this server."})
 
+        identifier_by_public_id = {get_public_id(identifier): identifier for identifier in available_identifiers}
         requested_models = parse_qs(urlparse(self.path).query).get("model")
-        model_identifier = requested_models[0] if requested_models else available_identifiers[0]
-        if model_identifier not in available_identifiers:
-            return self.send_json(400, {"error": f"The model '{model_identifier}' is not available on this server."})
+        requested_public_id = requested_models[0] if requested_models else get_public_id(available_identifiers[0])
+        if requested_public_id not in identifier_by_public_id:
+            return self.send_json(400, {"error": f"The model '{requested_public_id}' is not available on this server."})
+        model_identifier = identifier_by_public_id[requested_public_id]
 
         request_size = int(self.headers.get("Content-Length") or 0)
         if request_size == 0:

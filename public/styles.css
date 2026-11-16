@@ -424,3 +424,22 @@ dialog::backdrop { background: rgba(18, 21, 31, 0.55); }
 @media (pointer: coarse) {
   .crop-controls select, .crop-controls input[type="number"] { min-height: 44px; }
 }
+
+/* Tour: highlights inside clipped cards sit inside the edge, and the tour's own buttons keep pink for the highlight only */
+.compare.tour-highlight, .card-actions.tour-highlight { outline-offset: -4px; }
+.tour :focus-visible { outline-color: var(--ultramarine-text); }
+
+/* Card buttons: keep Download, Touch up and Crop and resize on one row on desktop */
+.results-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
+.card-meta { flex: 1 1 100%; }
+.card-actions { flex: 1 1 100%; flex-wrap: wrap; gap: 8px 10px; }
+.card-actions .button { white-space: nowrap; }
+.card-actions .remove-button { margin-left: auto; }
+
+/* Card footer: file name and Remove on the first row, action buttons together on the second */
+.card-meta { flex: 1 1 0; min-width: 0; }
+.card-footer > .remove-button { flex: 0 0 auto; }
+.card-actions .button-small { padding: 6px 12px; }
+@media (max-width: 600px) {
+  .card-footer { flex-direction: row; align-items: center; }
+}

@@ -15,14 +15,17 @@ const TOUR_STEPS = [
   {
     title: "Compare the result",
     text: "When an image is done, drag the pink line across it to compare before and after.",
+    optionalTargetSelector: ".card[data-status='done'] .compare",
   },
   {
     title: "Fix and reshape, if you want to",
     text: "Touch up erases leftovers or restores parts removed by mistake. Crop and resize sets an exact size, such as a passport photo. Neither is applied unless you use it.",
+    optionalTargetSelector: ".card[data-status='done'] .card-actions",
   },
   {
     title: "Download",
     text: "Pick a background colour, format and size, then download one image or everything as a ZIP.",
+    optionalTargetSelector: ".export-toolbar",
   },
   {
     title: "Your images stay in this tab",
@@ -59,6 +62,13 @@ function getAvailableTourSteps() {
   });
 }
 
+/** The element a step points at. Steps 3 to 5 point at real results, so they only have one once an image is done. */
+function findTourTarget(step) {
+  const selector = step.targetSelector || step.optionalTargetSelector;
+  const target = selector ? document.querySelector(selector) : null;
+  return target && !target.closest("[hidden]") ? target : null;
+}
+
 function clearTourHighlight() {
   document.querySelectorAll(".tour-highlight").forEach((element) => element.classList.remove("tour-highlight"));
 }
@@ -75,10 +85,12 @@ function showTourStep(step) {
   tourNextButton.textContent = stepNumber === availableSteps.length ? "Done" : "Next";
 
   clearTourHighlight();
-  if (step.targetSelector) {
-    const target = document.querySelector(step.targetSelector);
+  const target = findTourTarget(step);
+  if (target) {
     target.classList.add("tour-highlight");
     target.scrollIntoView({ block: "center" });
+  } else if (step.optionalTargetSelector) {
+    document.getElementById("tour-text").textContent = `${step.text} It gets highlighted here once your first image is done.`;
   }
 }
 

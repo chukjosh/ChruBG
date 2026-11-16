@@ -20,24 +20,28 @@ RELEASES_BASE_URL = "https://github.com/danielgatis/rembg/releases/download/v0.0
 
 MODEL_REGISTRY = {
     "isnet-general-use": {
-        "label": "ISNet",
-        "description": "Best edges. Slower and uses more memory.",
+        "public_id": "studio",
+        "label": "Studio",
+        "badge": "Recommended",
+        "description": "Cleanest edges, great for people, products and fine detail. Takes longer.",
         "input_size": 1024,
         "mean": (0.485, 0.456, 0.406),
         "standard_deviation": (1.0, 1.0, 1.0),
         "download_url": f"{RELEASES_BASE_URL}/isnet-general-use.onnx",
     },
     "silueta": {
-        "label": "Silueta",
-        "description": "Fast and light. Rougher edges.",
+        "public_id": "swift",
+        "label": "Swift",
+        "description": "Quick and light. A good all-rounder for clear subjects.",
         "input_size": 320,
         "mean": (0.485, 0.456, 0.406),
         "standard_deviation": (0.229, 0.224, 0.225),
         "download_url": f"{RELEASES_BASE_URL}/silueta.onnx",
     },
     "u2netp": {
-        "label": "U2-Net Lite",
-        "description": "Smallest and fastest. Lowest detail.",
+        "public_id": "spark",
+        "label": "Spark",
+        "description": "The fastest option. Best for simple, clear shapes.",
         "input_size": 320,
         "mean": (0.485, 0.456, 0.406),
         "standard_deviation": (0.229, 0.224, 0.225),
@@ -45,8 +49,9 @@ MODEL_REGISTRY = {
     },
 }
 
+# Visitors only see "public_id", "label", "badge" and "description". The key and download_url stay on the server.
 # The first enabled model is the default. Hosted instances should keep this list short.
-DEFAULT_ENABLED_MODELS = "isnet-general-use"
+DEFAULT_ENABLED_MODELS = "isnet-general-use,silueta,u2netp"
 
 
 def get_requested_model_identifiers():
@@ -62,3 +67,8 @@ def get_browser_model_identifiers():
     """Reads BROWSER_MODELS. Set it to an empty value to turn in-browser processing off."""
     requested_models = os.environ.get("BROWSER_MODELS", DEFAULT_BROWSER_MODELS)
     return parse_model_list(requested_models)
+
+
+def get_public_id(model_identifier):
+    """The name visitors see in URLs and the API. It keeps the underlying model name out of the page."""
+    return MODEL_REGISTRY.get(model_identifier, {}).get("public_id", model_identifier)

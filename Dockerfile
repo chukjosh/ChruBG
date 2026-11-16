@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Choose the models to bake into the image. The first one is the default.
-ARG ENABLED_MODELS=isnet-general-use,silueta
+ARG ENABLED_MODELS=isnet-general-use,silueta,u2netp
 ENV ENABLED_MODELS=${ENABLED_MODELS}
 RUN python3 scripts/download_model.py
 

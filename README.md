@@ -36,8 +36,8 @@ python3 local_server.py
 
 Then open **http://localhost:8000** in your browser. Press Ctrl+C in the terminal to stop it.
 
-With no settings, the download step fetches the default server model (`isnet-general-use`, about 179 MB) and the in-browser model
-(`silueta`, about 44 MB). It only downloads files that are missing, so later runs start straight away.
+With no settings, the download step fetches the three server models (Studio about 179 MB, Swift about 44 MB, Spark about 5 MB)
+and a copy of Swift for the browser (about 44 MB). It only downloads files that are missing, so later runs start straight away.
 Your images are processed on your own computer and are not saved anywhere.
 
 ### Choosing other models locally
@@ -103,11 +103,14 @@ ChruBG/
 │   └── remove_background.py   # The background removal function, the only server code
 ├── public/
 │   ├── app.js                 # Main page logic: images, cards, model picker
+│   ├── apple-touch-icon.png   # Home screen icon for phones
 │   ├── browser-engine.js      # Optional in-browser processing
 │   ├── crop-editor.js         # Crop and resize editor
 │   ├── crop-math.js           # Crop geometry, also covered by tests
 │   ├── editor.js              # Touch up brush
 │   ├── export.js              # Downloads, backgrounds, trim and ZIP
+│   ├── favicon.ico            # Browser tab icon for older browsers
+│   ├── favicon.svg            # Browser tab icon
 │   ├── index.html             # The page
 │   ├── styles.css             # Styles, including dark mode and mobile
 │   ├── theme.js               # Light and dark theme switch
@@ -143,14 +146,19 @@ The page also loads some resources from third parties, listed under "What is not
 Set `ENABLED_MODELS` to a comma separated list. The first one is the default.
 When more than one is enabled, the page shows a model picker.
 
-| Model | Notes |
-| --- | --- |
-| `isnet-general-use` | Best edges, about 1.6 GB memory |
-| `silueta` | Fast and light, rougher edges |
-| `u2netp` | Smallest and fastest, lowest detail |
+The app shows friendly names. The `ENABLED_MODELS` and `BROWSER_MODELS` settings use the technical values.
 
-A hosted instance should enable one or two light models. Self-hosters can enable whatever their hardware handles.
-On Vercel's standard function size limit only `u2netp` fits. See "Function size limit on Vercel" below.
+| Name in the app | Setting value | Notes |
+| --- | --- | --- |
+| Studio (Recommended) | `isnet-general-use` | Best edges, about 1.6 GB memory |
+| Swift | `silueta` | Fast and light, rougher edges |
+| Spark | `u2netp` | Smallest and fastest, lowest detail |
+
+Visitors only see the friendly names in the page and the API. To rename a model or change its badge, edit its entry in `api/_model_registry.py`.
+
+All three are enabled by default, and Studio is the default choice. Only one model is kept in memory at a time
+(`MAXIMUM_LOADED_MODELS`), so choosing a different model the first time takes a little longer.
+The three together make the Vercel function about 400 MB, which needs large functions. See "Function size limit on Vercel" below.
 To add a model, add an entry to `api/_model_registry.py`. Check each model's license before offering it publicly.
 
 ## Using your own model
@@ -163,6 +171,7 @@ because ChruBG also needs to know how to prepare the image for it.
 
 ```python
 "my-model": {
+    "public_id": "my-model",  # the name used in URLs and the API, can differ from the key above
     "label": "My model",
     "description": "Short text shown in the model picker.",
     "input_size": 512,
@@ -171,7 +180,7 @@ because ChruBG also needs to know how to prepare the image for it.
 },
 ```
 
-3. Enable it with `ENABLED_MODELS=my-model` (or add it to the list). To also offer it in the browser, put a copy at `public/models/my-model.onnx` and add it to `BROWSER_MODELS`.
+3. Enable it with `ENABLED_MODELS=my-model` (or add it to the list). To also offer it in the browser, put a copy at `public/models/<public_id>.onnx` and add it to `BROWSER_MODELS`.
 
 The values for `input_size`, `mean` and `standard_deviation` come from the model's own documentation.
 
@@ -229,7 +238,8 @@ Settings in `vercel.json` take priority over the dashboard fields.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `ENABLED_MODELS` | `isnet-general-use` | Models the server offers. The first is the default. `none` means no server model |
+| `ENABLED_MODELS` | `isnet-general-use,silueta,u2netp` | Models the server offers. The first is the default. `none` means no server model |
+| `MAXIMUM_LOADED_MODELS` | `1` | How many models one server instance keeps in memory. `1` is safest on Vercel's 2 GB, but switching models reloads the model |
 | `BROWSER_MODELS` | `silueta` | Models people can choose to run in their own browser. `none` turns it off |
 | `RATE_LIMIT_PER_MINUTE` | `30` | Requests per client per minute. `0` turns it off |
 
@@ -259,7 +269,7 @@ The memory limit is separate: Hobby functions get 2 GB, and `isnet-general-use` 
 ## Run with Docker
 
 ```bash
-docker build -t chrubg --build-arg ENABLED_MODELS=isnet-general-use,silueta .
+docker build -t chrubg --build-arg ENABLED_MODELS=isnet-general-use,silueta,u2netp .
 docker run -p 8000:8000 chrubg
 ```
 
@@ -270,6 +280,16 @@ Docker has no Vercel size or memory limits, so heavier models are possible here.
 - Vercel caps request and response bodies at 4.5 MB, so the browser sends a copy resized to 1024 px.
 - The first request after idle is slower while the model loads.
 - Images are processed one at a time per browser tab.
+
+## Credits
+
+ChruBG shows its models under friendly names, but the research and weights behind them belong to others:
+
+- **Studio** is the IS-Net general use model from the DIS project (Xuebin Qin and colleagues).
+- **Swift** and **Spark** come from the U²-Net family (Xuebin Qin and colleagues), as the Silueta and U2-Net-P variants.
+- The ONNX files are the ones published by the [rembg](https://github.com/danielgatis/rembg) project.
+
+Each model has its own license. Check it before offering a model publicly.
 
 ## Contributing and license
 

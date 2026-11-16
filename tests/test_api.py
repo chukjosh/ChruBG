@@ -74,3 +74,31 @@ def test_rate_limit_returns_429(server_address, monkeypatch):
     status_codes = [send_request(server_address, body=b"x")[0] for _ in range(3)]
     assert status_codes == [400, 400, 429]
     api.recent_request_times_by_client.clear()
+
+
+def test_api_does_not_expose_underlying_model_names(server_address):
+    _, body = send_request(server_address)
+    assert "u2netp" not in body.decode()
+    assert "silueta" not in body.decode()
+
+
+def test_post_accepts_the_public_model_name(server_address):
+    status_code, _ = send_request(server_address, "/api/remove_background?model=spark", make_test_image_bytes())
+    assert status_code == 200
+
+
+def test_only_the_most_recent_models_stay_loaded(monkeypatch):
+    monkeypatch.setattr(api.onnxruntime, "InferenceSession", lambda path, providers: object())
+    api.cached_inference_sessions.clear()
+
+    monkeypatch.setattr(api, "MAXIMUM_LOADED_MODELS", 1)
+    api.get_inference_session("first-model")
+    api.get_inference_session("second-model")
+    assert list(api.cached_inference_sessions) == ["second-model"]
+
+    monkeypatch.setattr(api, "MAXIMUM_LOADED_MODELS", 2)
+    api.get_inference_session("third-model")
+    api.get_inference_session("second-model")  # reusing a model makes it the most recent
+    api.get_inference_session("fourth-model")
+    assert list(api.cached_inference_sessions) == ["second-model", "fourth-model"]
+    api.cached_inference_sessions.clear()

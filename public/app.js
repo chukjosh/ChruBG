@@ -60,7 +60,9 @@ function showModelChoices() {
   const models = getModelsForLocation();
   const canChooseLocation = serverModels.length > 0 && browserModels.length > 0;
 
-  modelSelect.replaceChildren(...models.map((model) => new Option(model.label, model.id)));
+  modelSelect.replaceChildren(
+    ...models.map((model) => new Option(model.badge ? `${model.label} (${model.badge})` : model.label, model.id))
+  );
   locationRadios.forEach((radio) => (radio.checked = radio.value === processingLocation));
   locationChoice.hidden = !canChooseLocation;
   modelRow.hidden = models.length < 2;
