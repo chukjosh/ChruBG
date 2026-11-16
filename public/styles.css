@@ -31,12 +31,23 @@ body {
 .site-header { display: flex; align-items: center; justify-content: space-between; padding: 20px clamp(16px, 4vw, 48px); }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: "Bricolage Grotesque", system-ui, sans-serif;
   font-weight: 800;
   font-size: 1.35rem;
   letter-spacing: -0.02em;
   color: var(--ink);
   text-decoration: none;
+}
+
+.wordmark-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .page {
