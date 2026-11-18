@@ -2,7 +2,7 @@
 // The page files are fetched fresh when online and cached copies are used offline.
 // Models and CDN libraries are cached after their first download. The API is never cached.
 
-const CACHE_NAME = "chrubg-v1";
+const CACHE_NAME = "chrubg-v2";
 const APP_SHELL = [
   "/", "/index.html", "/video.html", "/styles.css", "/theme.js", "/pwa.js", "/app.js", "/edges.js", "/export.js",
   "/browser-engine.js", "/device-hints.js", "/compare-models.js", "/crop-math.js", "/crop-editor.js", "/editor.js", "/tour.js", "/video.js",

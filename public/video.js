@@ -88,13 +88,17 @@ async function detectEngines() {
       detected.push({ id: "browser", label: `In your browser (${BROWSER_VIDEO_MODEL.label})` });
     }
   } catch (ignoredNetworkError) {}
-  try {
-    const response = await fetch(LOCAL_VIDEO_ENDPOINT);
-    const status = response.ok ? await response.json() : null;
-    if (status && status.available) {
-      detected.push({ id: "local", label: `Local server (${status.models[0].label})`, maximumSeconds: status.maximum_seconds });
-    }
-  } catch (ignoredNetworkError) {}
+  // Only probe the local video server if we are running locally, not on hosted domains like Vercel
+  const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+  if (isLocalHost) {
+    try {
+      const response = await fetch(LOCAL_VIDEO_ENDPOINT);
+      const status = response.ok ? await response.json() : null;
+      if (status && status.available) {
+        detected.push({ id: "local", label: `Local server (${status.models[0].label})`, maximumSeconds: status.maximum_seconds });
+      }
+    } catch (ignoredNetworkError) {}
+  }
   return detected;
 }
 
