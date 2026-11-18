@@ -19,13 +19,18 @@ const TOUR_STEPS = [
   },
   {
     title: "Fix and reshape, if you want to",
-    text: "Touch up erases leftovers or restores parts removed by mistake. Crop and resize sets an exact size, such as a passport photo. Neither is applied unless you use it.",
+    text: "Touch up erases leftovers or restores parts removed by mistake. Crop and resize sets an exact size, such as a passport photo. Compare models runs the same image through two models so you can keep the better one. None of these are applied unless you use them.",
     optionalTargetSelector: ".card[data-status='done'] .card-actions",
   },
   {
     title: "Download",
     text: "Pick a background colour, format and size, then download one image or everything as a ZIP.",
     optionalTargetSelector: ".export-toolbar",
+  },
+  {
+    title: "Video works too",
+    text: "ChruBG also removes backgrounds from short video clips. Open Video in the menu. It is a beta, so expect a few rough edges.",
+    targetSelector: ".nav-link[href='video.html']",
   },
   {
     title: "Your images stay in this tab",

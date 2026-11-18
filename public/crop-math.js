@@ -43,12 +43,14 @@ function getAutoFraming(subjectBounds, sourceWidth, sourceHeight, outputWidth, o
 }
 
 /** Draws the cropped view of an image onto a canvas context of the output size. */
-function drawCrop(context, image, sourceWidth, sourceHeight, crop, targetWidth, targetHeight, backgroundColor) {
+function drawCrop(context, image, sourceWidth, sourceHeight, crop, targetWidth, targetHeight, backgroundColor, keepExisting = false) {
   context.save();
-  context.clearRect(0, 0, targetWidth, targetHeight);
-  if (backgroundColor) {
-    context.fillStyle = backgroundColor;
-    context.fillRect(0, 0, targetWidth, targetHeight);
+  if (!keepExisting) {
+    context.clearRect(0, 0, targetWidth, targetHeight);
+    if (backgroundColor) {
+      context.fillStyle = backgroundColor;
+      context.fillRect(0, 0, targetWidth, targetHeight);
+    }
   }
 
   const frame = getFrameInSource(crop, sourceWidth, sourceHeight);

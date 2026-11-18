@@ -51,7 +51,7 @@ function drawCropPreview() {
 }
 
 async function openCropEditor(item) {
-  const cutoutBitmap = await createImageBitmap(item.cutoutBlob);
+  const cutoutBitmap = await createImageBitmap(await getAdjustedCutoutBlob(item));
   const crop = item.crop
     ? { ...item.crop }
     : { outputWidth: 1080, outputHeight: 1080, centerX: 0.5, centerY: 0.5, zoom: 1 };
@@ -157,7 +157,7 @@ document.getElementById("crop-apply-all").addEventListener("click", async () => 
   item.crop = { ...crop };
   for (const otherItem of imageItems) {
     if (otherItem === item || otherItem.status !== "done") continue;
-    const otherBitmap = await createImageBitmap(otherItem.cutoutBlob);
+    const otherBitmap = await createImageBitmap(await getAdjustedCutoutBlob(otherItem));
     otherItem.crop = {
       outputWidth: crop.outputWidth,
       outputHeight: crop.outputHeight,

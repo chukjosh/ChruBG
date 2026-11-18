@@ -1,7 +1,9 @@
 // Optional in-browser processing. Used only when the person chooses "In your browser".
 // The model runs locally with onnxruntime-web, so the image never leaves the device.
 
-const ONNX_RUNTIME_WEB_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js";
+// The WebGPU build can use the graphics card and still falls back to the processor
+const ONNX_RUNTIME_WEB_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.webgpu.min.js";
+let usingWebGpu = false;
 const browserSessionsByModelId = new Map();
 let onnxRuntimeLoadingPromise = null;
 
@@ -11,7 +13,8 @@ function loadOnnxRuntime() {
     const scriptElement = document.createElement("script");
     scriptElement.src = ONNX_RUNTIME_WEB_URL;
     scriptElement.onload = () => {
-      ort.env.wasm.proxy = true; // run in a worker so the page stays responsive
+      usingWebGpu = Boolean(navigator.gpu);
+      ort.env.wasm.proxy = !usingWebGpu; // the processor path runs in a worker so the page stays responsive
       resolve();
     };
     scriptElement.onerror = () => reject(new Error("The in-browser engine could not be loaded. Check your connection or use the server."));
@@ -51,18 +54,31 @@ async function downloadModelBytes(model, item) {
   return modelBytes;
 }
 
+/** Creates a model session on the graphics card when possible, and falls back to the processor. */
+async function createBrowserSession(modelBytes) {
+  const providerChoices = usingWebGpu ? [["webgpu", "wasm"], ["wasm"]] : [["wasm"]];
+  let lastError = null;
+  for (const executionProviders of providerChoices) {
+    try {
+      return await ort.InferenceSession.create(modelBytes, { executionProviders });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 async function getBrowserSession(model, item) {
   if (!browserSessionsByModelId.has(model.id)) {
     const modelBytes = await downloadModelBytes(model, item);
     showStatusDetail(item, "Starting the model...");
-    browserSessionsByModelId.set(model.id, await ort.InferenceSession.create(modelBytes, { executionProviders: ["wasm"] }));
+    browserSessionsByModelId.set(model.id, await createBrowserSession(modelBytes));
   }
   return browserSessionsByModelId.get(model.id);
 }
 
 /** Same steps as the server: resize, normalise, run, then turn the output into a mask. */
-async function runModelInBrowser(item) {
-  const model = item.model;
+async function runModelInBrowser(item, model = item.model) {
   showStatusDetail(item, "Loading the in-browser engine...");
   await loadOnnxRuntime();
   const session = await getBrowserSession(model, item);

@@ -9,6 +9,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <meta name="description" content="Experimental video background removal that runs in your browser or on a local server.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,14 +28,16 @@
       <a class="nav-link" aria-current="page" href="video.html" title="Video background removal, beta">Video <span class="badge">Beta</span></a>
     </nav>
     <div class="header-actions">
+      <button type="button" class="text-button" id="install-button" hidden>Install app</button>
       <button type="button" class="theme-toggle" id="theme-toggle" title="Switch between automatic, light and dark" aria-label="Change colour theme">Theme: Auto</button>
     </div>
   </header>
+  <p class="offline-banner" id="offline-banner" role="status" hidden>You are offline. Anything that runs in your browser with models you have already downloaded still works. Server processing needs a connection.</p>
 
   <main class="page">
     <section class="intro">
       <h1>Remove video backgrounds <span class="badge badge-large">Beta</span></h1>
-      <p class="lead">Experimental. Works best with short clips of a person or object against a different background. Audio is not kept.</p>
+      <p class="lead">Experimental. Works best with short clips of a person or object against a different background.</p>
     </section>
 
     <section class="uploader">
@@ -54,28 +57,59 @@
           <select id="video-output"></select>
         </div>
         <div class="model-row" id="video-background-row">
-          <label for="video-background">Background</label>
-          <input type="color" id="video-background" value="#00ff00">
+          <label for="video-background-type">Background</label>
+          <select id="video-background-type"><option value="color">Solid colour</option><option value="image">Image</option><option value="blur">Blurred original</option></select>
+          <input type="color" id="video-background" value="#00ff00" aria-label="Background colour">
+          <input type="file" id="video-background-image" accept="image/*" hidden>
+          <button type="button" class="button button-secondary button-small" id="video-background-image-button" hidden>Choose image</button>
+          <span class="field-hint" id="video-background-image-name"></span>
         </div>
+        <label class="toggle" id="video-audio-row"><input type="checkbox" id="video-keep-audio" checked> Keep audio</label>
         <p class="model-description" id="video-engine-note"></p>
       </div>
     </section>
 
     <p class="notice" id="video-notice" role="status"></p>
 
+    <section class="video-trim" id="video-trim" hidden>
+      <video id="video-preview" controls muted playsinline></video>
+      <p class="field-hint" id="video-trim-info"></p>
+      <div class="trim-controls">
+        <label>Start (s) <input type="number" id="video-start" min="0" step="0.1" value="0" inputmode="decimal"></label>
+        <button type="button" class="text-button" id="video-set-start">Use current time</button>
+        <label>End (s) <input type="number" id="video-end" min="0" step="0.1" inputmode="decimal"></label>
+        <button type="button" class="text-button" id="video-set-end">Use current time</button>
+      </div>
+      <div class="hint-box" id="device-hint" role="status" hidden>
+        <p id="device-hint-text"></p>
+        <div class="hint-actions">
+          <button type="button" class="button button-secondary button-small" id="device-hint-switch">Use the local server</button>
+          <button type="button" class="text-button" id="device-hint-dismiss">Dismiss</button>
+          <button type="button" class="text-button" id="device-hint-never">Do not show this again</button>
+        </div>
+      </div>
+      <div class="video-actions">
+        <button type="button" class="button button-primary button-small" id="video-process">Remove background</button>
+        <button type="button" class="button button-secondary button-small" id="video-trim-cancel">Choose another video</button>
+      </div>
+    </section>
+
     <section class="video-job" id="video-job" hidden>
       <p id="video-status"></p>
       <progress id="video-progress" max="100"></progress>
       <video id="video-result" controls playsinline hidden></video>
+      <img id="video-frame-preview" alt="First frame of the transparent result" hidden>
       <div class="video-actions">
         <button type="button" class="button button-secondary button-small" id="video-cancel">Cancel</button>
         <button type="button" class="button button-primary button-small" id="video-download" hidden>Download</button>
-        <button type="button" class="button button-secondary button-small" id="video-restart" hidden>Process another video</button>
+        <button type="button" class="button button-secondary button-small" id="video-restart" hidden>Back to settings</button>
       </div>
     </section>
   </main>
 
   <script src="browser-engine.js"></script>
+  <script src="device-hints.js"></script>
   <script src="video.js"></script>
+  <script src="pwa.js"></script>
 </body>
 </html>

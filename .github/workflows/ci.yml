@@ -21,4 +21,4 @@ jobs:
       - name: Run frontend tests
         run: node --test tests/*.test.js
       - name: Check JavaScript syntax
-        run: node --check public/app.js && node --check public/export.js && node --check public/browser-engine.js && node --check public/editor.js && node --check public/theme.js && node --check public/crop-math.js && node --check public/crop-editor.js && node --check public/tour.js && node --check public/video.js
+        run: node --check public/app.js && node --check public/export.js && node --check public/browser-engine.js && node --check public/editor.js && node --check public/theme.js && node --check public/crop-math.js && node --check public/crop-editor.js && node --check public/tour.js && node --check public/video.js && node --check public/edges.js && node --check public/device-hints.js && node --check public/compare-models.js && node --check public/pwa.js && node --check public/sw.js

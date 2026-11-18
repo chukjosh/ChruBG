@@ -105,6 +105,7 @@ async function applyEditorChanges() {
     item.cutoutBlob = editedBlob;
     item.cutoutUrl = URL.createObjectURL(editedBlob);
     updateCard(item);
+    refreshEdgePreviews();
   }
   editorDialog.close();
 }

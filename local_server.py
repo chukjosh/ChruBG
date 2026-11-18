@@ -1,16 +1,21 @@
 """Single process server for Docker or local use. Serves the web page and the API on one port."""
 import os
 import sys
+import mimetypes
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 PROJECT_ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIRECTORY = os.path.join(PROJECT_ROOT_DIRECTORY, "public")
 API_PATH = "/api/remove_background"
 VIDEO_PATH = "/api/video_local"
+VIDEO_BACKGROUND_PATH = "/api/video_local/background"
 sys.path.insert(0, os.path.join(PROJECT_ROOT_DIRECTORY, "api"))
 
-from local_video import get_local_video_status, handle_video_post  # noqa: E402
+from local_video import get_local_video_status, handle_background_post, handle_video_post  # noqa: E402
 from remove_background import handler as api_handler  # noqa: E402
+
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 class LocalServerHandler(api_handler, SimpleHTTPRequestHandler):
@@ -32,7 +37,9 @@ class LocalServerHandler(api_handler, SimpleHTTPRequestHandler):
             SimpleHTTPRequestHandler.do_GET(self)
 
     def do_POST(self):
-        if self.is_video_request():
+        if self.path.split("?")[0] == VIDEO_BACKGROUND_PATH:
+            handle_background_post(self)
+        elif self.is_video_request():
             handle_video_post(self)
         elif self.is_api_request():
             api_handler.do_POST(self)

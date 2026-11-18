@@ -1,7 +1,7 @@
 # ChruBG
 
-Remove the background from images and download them as PNG or JPG.
-A static page plus one Python function. CPU only, no database, nothing saved.
+Remove backgrounds from photos and video. Free and open source, with no account needed.
+It can run entirely in your browser, or on a server you host. A static page plus one Python function, CPU only, no database, nothing saved.
 
 ## Quick start: run it on your computer
 
@@ -82,7 +82,14 @@ You can also use the Vercel CLI to mimic the hosted setup (`vercel dev`, after t
 - Add one image or many. Results stay in the tab until you remove them or close it.
 - Before and after slider on every image.
 - Full resolution downloads: the server returns a mask and the browser applies it to your original photo (up to 4096 px).
-- Background colours, PNG or JPG, trim to subject, or a square canvas.
+- Backgrounds: transparent, a colour, a blurred copy of your photo, or your own image, with an optional drop shadow.
+- Save as PNG, JPG or WebP, with an optional file size limit (for forms that cap uploads). Trim to subject, or a square canvas.
+- Edge controls: soften, grow or shrink the cutout edge, with a live preview.
+- Compare models: run one image through two models side by side and keep the result you prefer.
+- Gentle device hints: on a phone that looks slow, a one-time suggestion that the server may be faster. You always choose.
+- Take a photo with the camera button on phones and tablets.
+- Install it as an app and use it offline. See "Install and offline use".
+- Faster in-browser processing on the graphics card, where the browser allows it.
 - Download everything as a ZIP.
 - Light and dark themes, automatic by default with a manual switch. Works on phones and tablets.
 - Optional Crop and resize editor: drag and zoom inside a frame, pick an output size such as a passport photo, or set your own. Nothing is cropped unless you use it.
@@ -106,14 +113,23 @@ ChruBG/
 │   ├── app.js                 # Main page logic: images, cards, model picker
 │   ├── apple-touch-icon.png   # Home screen icon for phones
 │   ├── browser-engine.js      # Optional in-browser processing
+│   ├── compare-models.js      # Compare two models on one image
 │   ├── crop-editor.js         # Crop and resize editor
 │   ├── crop-math.js           # Crop geometry, also covered by tests
+│   ├── device-hints.js        # Slow device guess and hint dismissal, also covered by tests
+│   ├── edges.js               # Grow, shrink and soften the cutout edge, also covered by tests
 │   ├── editor.js              # Touch up brush
-│   ├── export.js              # Downloads, backgrounds, trim and ZIP
+│   ├── export.js              # Downloads, backgrounds, shadow, formats, edges and ZIP
 │   ├── favicon.ico            # Browser tab icon for older browsers
 │   ├── favicon.svg            # Browser tab icon
+│   ├── icon-192.png           # App icon for installing
+│   ├── icon-512.png           # App icon for installing
+│   ├── icon-maskable-512.png  # App icon with a safe margin
 │   ├── index.html             # The page
+│   ├── manifest.webmanifest   # Lets the browser install ChruBG as an app
+│   ├── pwa.js                 # Install button, offline notice and service worker setup
 │   ├── styles.css             # Styles, including dark mode and mobile
+│   ├── sw.js                  # Service worker for offline use
 │   ├── theme.js               # Light and dark theme switch
 │   ├── tour.js                # First visit walkthrough
 │   ├── video.html             # Video page (beta)
@@ -122,6 +138,8 @@ ChruBG/
 │   └── download_model.py      # Downloads the models, also runs at build time on Vercel
 ├── tests/
 │   ├── crop-math.test.js      # Tests for the crop geometry
+│   ├── device-hints.test.js   # Tests for the slow device guess
+│   ├── edges.test.js          # Tests for the edge controls
 │   ├── test_api.py            # Tests for the API
 │   └── test_video.py          # Tests for local video
 ├── .dockerignore              # Files Docker leaves out of the image
@@ -142,7 +160,7 @@ ChruBG/
 ## Privacy
 
 Images are held in memory only: in the browser tab, and in the server function for the length of one request.
-Images are never written to disk, a database or browser storage. The one exception is local video mode, which saves the video to a temporary folder while it is processed and then deletes it. Only two small preferences are kept: your theme choice (sessionStorage, this tab only) and whether you have seen the tour (localStorage). Closing or refreshing the tab clears all results.
+Images are never written to disk, a database or browser storage. The one exception is local video mode, which saves the video to a temporary folder while it is processed and then deletes it. Only two small preferences are kept: your theme choice (sessionStorage, this tab only) and whether you have seen the tour (localStorage). For offline use, the browser also caches the app's own files, the models and the CDN libraries. Your images and videos are never cached. Closing or refreshing the tab clears all results.
 With the default server mode, images are sent to the server to be processed. With "In your browser", they never leave the device.
 The page also loads some resources from third parties, listed under "What is not in the repo" below.
 
@@ -207,6 +225,36 @@ The build downloads them into `public/models/` and serves them as static files. 
 "Process: On the server / In your browser" switch, and the server stays the default.
 The model downloads to the browser the first time it is used, and older phones will be slower.
 
+## Install and offline use
+
+ChruBG can be installed as an app: use your browser's install option, or the **Install app** button that appears in the header.
+It needs HTTPS, which Vercel provides, or `localhost`.
+
+- **First visit:** needs a connection, because the page files and libraries are saved on that visit.
+- **Offline later:** the page opens, and anything that runs **in your browser** keeps working with models you have already used (they are cached the first time).
+  Server processing needs a connection, and the page says so if you try it offline.
+- **Updates:** page files are fetched fresh when you are online, so new versions arrive on their own.
+- **Resetting:** clear the site's data in your browser settings to remove the cached files and models.
+
+The cache lives in `public/sw.js`. The API is never cached. If you add or rename a page file, add it to `APP_SHELL` in that file.
+
+## Faster in-browser processing
+
+In-browser mode and in-browser video use the graphics card (WebGPU) when the browser supports it, and quietly fall back to the processor when it does not
+or when the graphics path fails. There is no setting for it. Support varies by browser and device, so speed varies too.
+It uses the WebGPU build of onnxruntime-web from the CDN.
+
+## Compare models
+
+Each finished image has a **Compare models** link (when more than one model is available where it was processed). It runs the image through two models you pick,
+shows both cutouts side by side with how long each took, and lets you keep either one. In browser mode only one model is offered today, so the link stays hidden.
+
+## Device hints
+
+When someone picks **In your browser** on a phone or tablet that looks slow, a small box suggests the server may be faster. It never switches anything on its own.
+It shows at most once per visit, only in that situation, and has a *Do not show this again* button. Video gets a similar hint for longer clips, which also points
+to the Start and End boxes. "Looks slow" is a rough guess from touch input plus little memory, few processor cores, or no graphics acceleration. Desktops are never flagged.
+
 ## Video background removal (beta)
 
 The **Video** link in the header opens an experimental page for removing the background from short clips.
@@ -220,8 +268,20 @@ cutting out each frame as a separate image.
 | In your browser | The video model file is present on the site (the default setup) | Nothing is uploaded. Clips up to 15 seconds. Slow on phones. The model (about 15 MB) downloads the first time. This is the default choice |
 | Local server | The page is served by `local_server.py` or Docker, ffmpeg is installed, and the video model is in `models/` | Faster, clips up to 60 seconds by default. Not available on Vercel, so the menu is hidden there |
 
-**Outputs.** In the browser: a video with a solid background (WebM, or MP4 where the browser records it) or a ZIP of transparent PNG frames.
-On the local server: an MP4 with a solid background or a transparent WebM. Audio is not kept.
+**Outputs.** Transparent is the first and default choice. Browsers cannot save a transparent video file, so in the browser it is a ZIP of transparent PNG
+frames, and the page shows the first frame over a checkerboard so you can see the transparency. On the local server it is a real transparent video (WebM).
+Other choices put a background behind the subject: a solid colour, your own image, or a blurred copy of the original footage. In the browser that gives a
+WebM (or MP4 where the browser records it), and on the local server an MP4.
+
+**Choosing a section.** After you pick a clip, a preview appears with **Start** and **End** boxes and "Use current time" buttons. Only the chosen section is
+processed, and the length limit applies to that section, not to the whole file. The Remove background button starts the run.
+
+**Audio is kept by default** (the *Keep audio* box is ticked). On the local server ffmpeg copies the original sound into the result.
+In the browser the original clip is played silently into the recording, so saving takes about as long as the clip, and it works in most desktop browsers.
+If a browser blocks it, the video is saved without sound. The PNG frames output has no audio.
+
+**Background images.** Choose *Image* under Background to put a picture behind the subject. On the local server the image is held in memory only,
+for a short time, until the video arrives.
 
 **Install ffmpeg for the local server.** Windows: `winget install Gyan.FFmpeg`. macOS: `brew install ffmpeg`. Ubuntu: `sudo apt install ffmpeg`.
 The Docker image already includes it. Restart the terminal after installing, then run `python scripts/download_model.py` and `python local_server.py`.
@@ -244,7 +304,7 @@ Some things are fetched at build time or by the browser instead of being committ
 | Item | Where it comes from | Used for | If unavailable |
 | --- | --- | --- | --- |
 | Model files (`.onnx`) | Downloaded by `scripts/download_model.py` from the rembg GitHub releases into `models/` and `public/models/` (both git-ignored) | Background removal | The build fails, or the model is missing at run time |
-| onnxruntime-web 1.20.1 | jsDelivr CDN, loaded the first time someone picks "In your browser" | In-browser mode | In-browser mode shows an error. Server mode still works |
+| onnxruntime-web 1.20.1 (WebGPU build) | jsDelivr CDN, loaded the first time someone picks "In your browser" | In-browser mode | In-browser mode shows an error. Server mode still works |
 | JSZip 3.10.1 | jsDelivr CDN, loaded the first time someone clicks "Download all (ZIP)" | ZIP download | ZIP download shows an error. Single downloads still work |
 | Google Fonts (Bricolage Grotesque, Instrument Sans) | Google Fonts, loaded with the page | Page typography | The page falls back to system fonts |
 

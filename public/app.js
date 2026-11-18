@@ -87,8 +87,36 @@ locationRadios.forEach((radio) =>
   radio.addEventListener("change", () => {
     processingLocation = radio.value;
     showModelChoices();
+    maybeShowDeviceHint();
   })
 );
+
+/* ---------- Device hint ---------- */
+
+// Shown at most once per visit, only when someone picks the browser on a device that looks slow.
+// It is a suggestion: nothing switches by itself, and it can be dismissed for good.
+const deviceHint = document.getElementById("device-hint");
+let deviceHintShownThisVisit = false;
+
+function maybeShowDeviceHint() {
+  deviceHint.hidden = true;
+  const shouldShow = processingLocation === "browser" && serverModels.length > 0 && !deviceHintShownThisVisit
+    && !isHintDismissed("images-browser") && deviceLooksSlow(readDeviceFacts());
+  if (!shouldShow) return;
+  deviceHintShownThisVisit = true;
+  deviceHint.hidden = false;
+}
+
+document.getElementById("device-hint-switch").addEventListener("click", () => {
+  processingLocation = "server";
+  showModelChoices();
+  deviceHint.hidden = true;
+});
+document.getElementById("device-hint-dismiss").addEventListener("click", () => (deviceHint.hidden = true));
+document.getElementById("device-hint-never").addEventListener("click", () => {
+  dismissHintForGood("images-browser");
+  deviceHint.hidden = true;
+});
 
 /* ---------- Cards ---------- */
 
@@ -109,6 +137,7 @@ function createItem(file) {
     originalFile: file,
     cutoutBlob: null,
     crop: null, // set only if the person uses Crop and resize
+    previewUrl: null, // the cutout with edge settings applied, when they are not zero
     originalUrl: null,
     cutoutUrl: null,
     abortController: new AbortController(),
@@ -125,6 +154,7 @@ function createItem(file) {
   item.card.querySelector(".download-link").addEventListener("click", () => downloadItem(item));
   item.card.querySelector(".edit-button").addEventListener("click", () => openEditor(item));
   item.card.querySelector(".crop-button").addEventListener("click", () => openCropEditor(item));
+  item.card.querySelector(".compare-models-button").addEventListener("click", () => openCompareModels(item));
 
   item.card.querySelector(".card-name").textContent = item.fileName;
   item.card.querySelector(".card-name").title = item.fileName;
@@ -147,7 +177,10 @@ function updateCard(item) {
       : (item.status === "working" && item.statusDetail) || WAITING_MESSAGES[item.status] || "";
 
   if (item.originalUrl) item.card.querySelector(".compare-original").src = item.originalUrl;
-  if (item.cutoutUrl) item.card.querySelector(".compare-cutout").src = item.cutoutUrl;
+  const shownCutoutUrl = item.previewUrl || item.cutoutUrl;
+  if (shownCutoutUrl) item.card.querySelector(".compare-cutout").src = shownCutoutUrl;
+  item.card.querySelector(".compare-models-button").hidden = item.status !== "done" || modelsForItem(item).length < 2;
+  if (item.originalUrl) item.card.style.setProperty("--original-url", `url("${item.originalUrl}")`); // used by the blurred background preview
 }
 
 function updateResultsHeader() {
@@ -160,6 +193,7 @@ function removeItem(item) {
   item.abortController.abort();
   if (item.originalUrl) URL.revokeObjectURL(item.originalUrl);
   if (item.cutoutUrl) URL.revokeObjectURL(item.cutoutUrl);
+  if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
   item.card.remove();
   item.originalFile = null;
   item.cutoutBlob = null;
@@ -205,14 +239,22 @@ function queueItem(item) {
   processWaitingItems();
 }
 
-async function requestCutout(item) {
-  const modelQuery = item.modelId ? `?model=${encodeURIComponent(item.modelId)}` : "";
-  const response = await fetch(REMOVE_BACKGROUND_ENDPOINT + modelQuery, {
-    method: "POST",
-    headers: { "Content-Type": "image/jpeg" },
-    body: item.jpegBlob,
-    signal: item.abortController.signal,
-  });
+async function requestCutout(item, modelId = item.modelId) {
+  const modelQuery = modelId ? `?model=${encodeURIComponent(modelId)}` : "";
+  let response;
+  try {
+    response = await fetch(REMOVE_BACKGROUND_ENDPOINT + modelQuery, {
+      method: "POST",
+      headers: { "Content-Type": "image/jpeg" },
+      body: item.jpegBlob,
+      signal: item.abortController.signal,
+    });
+  } catch (networkError) {
+    if (networkError.name === "AbortError") throw networkError;
+    throw new Error(navigator.onLine
+      ? "The server could not be reached. Try again in a moment."
+      : "You are offline. Choose \"In your browser\" to keep working, if it is offered.");
+  }
 
   if (!response.ok) {
     let serverMessage = "Something went wrong while removing the background. Try again in a moment.";
@@ -247,6 +289,7 @@ async function processWaitingItems() {
       item.errorMessage = error.message || "The image could not be processed.";
     }
     updateCard(item);
+    scheduleEdgePreviewRefresh();
   }
 
   isProcessingQueue = false;
@@ -270,6 +313,14 @@ function addFiles(fileList) {
 }
 
 dropzoneButton.addEventListener("click", () => fileInput.click());
+
+// "Take a photo" opens the camera on phones and tablets
+const cameraInput = document.getElementById("camera-input");
+document.getElementById("camera-button").addEventListener("click", () => cameraInput.click());
+cameraInput.addEventListener("change", () => {
+  addFiles(cameraInput.files);
+  cameraInput.value = "";
+});
 fileInput.addEventListener("change", () => {
   addFiles(fileInput.files);
   fileInput.value = "";

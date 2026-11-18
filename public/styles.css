@@ -472,3 +472,51 @@ dialog::backdrop { background: rgba(18, 21, 31, 0.55); }
 #video-result { width: 100%; max-height: 60vh; border-radius: 8px; background: conic-gradient(var(--checker-dark) 25%, var(--checker-light) 0 50%, var(--checker-dark) 0 75%, var(--checker-light) 0) 0 0 / 20px 20px; }
 .video-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 #video-background { width: 40px; height: 32px; padding: 0; border: 0; background: none; cursor: pointer; }
+
+/* Camera button: only on phones and tablets, where it opens the camera */
+.camera-button { display: none; margin-top: 12px; }
+@media (pointer: coarse) { .camera-button { display: inline-block; } }
+
+/* Background choices, shadow and edge controls */
+.swatch-blur { background: linear-gradient(135deg, #9db0ff, #ffb3cf 60%, #ffe2a8); filter: saturate(0.9); }
+.swatch-image { display: inline-flex; align-items: center; justify-content: center; color: var(--slate); font-weight: 700; background: var(--surface); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; }
+.edge-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border: 0; padding: 0; margin: 0; }
+.edge-controls legend { float: left; margin-right: 8px; padding: 0; }
+.edge-controls label { display: flex; align-items: center; gap: 6px; }
+.edge-controls input[type="range"] { width: 90px; }
+.results-grid[data-background="blur"] .compare::before { content: ""; position: absolute; inset: 0; background: var(--original-url) center / cover; filter: blur(14px); transform: scale(1.12); }
+.results-grid[data-shadow="on"] .compare-cutout { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4)); }
+
+/* Offline notice and small helpers */
+.offline-banner { margin: 0; padding: 8px clamp(16px, 4vw, 48px); background: var(--surface); border-bottom: 1px solid var(--line); color: var(--slate); font-size: 0.9rem; }
+.field-hint { color: var(--slate); font-size: 0.9rem; }
+
+.lead a { color: var(--ultramarine-text); font-weight: 600; }
+
+/* Device hint (a gentle suggestion, never a blocker) */
+.hint-box { margin-top: 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--ultramarine); border-radius: 10px; }
+.hint-box p { margin: 0 0 10px; color: var(--ink); }
+.hint-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+
+/* Compare models */
+.compare-pickers { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.compare-pickers label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--slate); }
+.compare-pickers select { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.compare-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.compare-column { margin: 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.compare-result { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; background: conic-gradient(var(--checker-dark) 25%, var(--checker-light) 0 50%, var(--checker-dark) 0 75%, var(--checker-light) 0) 0 0 / 20px 20px; }
+.compare-result img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.compare-column figcaption { font-weight: 600; font-size: 0.92rem; }
+.card-footer > .compare-models-button { flex: 0 0 auto; }
+@media (max-width: 600px) { .compare-columns { grid-template-columns: 1fr; } }
+@media (pointer: coarse) { .compare-pickers select { min-height: 44px; } }
+
+/* Video: choosing the section to process, and the transparent preview */
+.video-trim { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+#video-preview { width: 100%; max-height: 50vh; border-radius: 8px; background: #000; }
+.trim-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.trim-controls label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--slate); }
+.trim-controls input[type="number"] { width: 6.5em; font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+#video-frame-preview { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; background: conic-gradient(var(--checker-dark) 25%, var(--checker-light) 0 50%, var(--checker-dark) 0 75%, var(--checker-light) 0) 0 0 / 20px 20px; }
+@media (pointer: coarse) { .trim-controls input[type="number"] { min-height: 44px; } }
