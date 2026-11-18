@@ -86,15 +86,30 @@ const ALLOWED_SERVER_HOSTS = [
   "0.0.0.0",
 ];
 
+let dynamicallyAllowedHosts = [];
+
+async function loadServerConfig() {
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.allowed_server_hosts)) {
+        dynamicallyAllowedHosts = data.allowed_server_hosts;
+      }
+    }
+  } catch (ignored) {}
+}
+
 function canUseServerVideo() {
   const host = window.location.hostname;
   const isLan = /^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
-  return isLan || ALLOWED_SERVER_HOSTS.includes(host);
+  return isLan || ALLOWED_SERVER_HOSTS.includes(host) || dynamicallyAllowedHosts.includes(host);
 }
 
 /* ---------- Which engines are available ---------- */
 
 async function detectEngines() {
+  await loadServerConfig();
   const detected = [];
   try {
     if ((await fetch(BROWSER_VIDEO_MODEL.url, { method: "HEAD" })).ok) {

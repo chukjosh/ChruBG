@@ -4,3 +4,4 @@ __pycache__/
 public/models/
 config.bat
 node_modules
+.env

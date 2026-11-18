@@ -15,7 +15,24 @@ from local_video import get_local_video_status, handle_background_post, handle_v
 from remove_background import handler as api_handler  # noqa: E402
 
 
+def load_env_file():
+    """Lightweight loader for .env without external dependencies."""
+    env_path = os.path.join(PROJECT_ROOT_DIRECTORY, ".env")
+    if not os.path.isfile(env_path):
+        return
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            key, val = key.strip(), val.strip().strip("\"'")
+            os.environ.setdefault(key, val)
+
+
+load_env_file()
 mimetypes.add_type("application/manifest+json", ".webmanifest")
+
 
 
 class LocalServerHandler(api_handler, SimpleHTTPRequestHandler):
@@ -33,8 +50,14 @@ class LocalServerHandler(api_handler, SimpleHTTPRequestHandler):
     def is_video_request(self):
         return self.path.split("?")[0] == VIDEO_PATH
 
+    def is_config_request(self):
+        return self.path.split("?")[0] == "/api/config"
+
     def do_GET(self):
-        if self.is_video_request():
+        if self.is_config_request():
+            allowed = [h.strip() for h in os.environ.get("ALLOWED_SERVER_HOSTS", "").split(",") if h.strip()]
+            self.send_json(200, {"allowed_server_hosts": allowed})
+        elif self.is_video_request():
             self.send_json(200, get_local_video_status())
         elif self.is_api_request():
             api_handler.do_GET(self)
