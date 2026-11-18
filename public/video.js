@@ -79,6 +79,19 @@ function formatSeconds(totalSeconds) {
   return seconds >= 60 ? `${Math.floor(seconds / 60)} min ${seconds % 60} s` : `${seconds} s`;
 }
 
+// Domains or private IP networks permitted to query the server-side video backend
+const ALLOWED_SERVER_HOSTS = [
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+];
+
+function canUseServerVideo() {
+  const host = window.location.hostname;
+  const isLan = /^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
+  return isLan || ALLOWED_SERVER_HOSTS.includes(host);
+}
+
 /* ---------- Which engines are available ---------- */
 
 async function detectEngines() {
@@ -88,9 +101,8 @@ async function detectEngines() {
       detected.push({ id: "browser", label: `In your browser (${BROWSER_VIDEO_MODEL.label})` });
     }
   } catch (ignoredNetworkError) {}
-  // Only probe the local video server if we are running locally, not on hosted domains like Vercel
-  const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
-  if (isLocalHost) {
+  // Probe the server-side video backend only on permitted hosts or LAN environments
+  if (canUseServerVideo()) {
     try {
       const response = await fetch(LOCAL_VIDEO_ENDPOINT);
       const status = response.ok ? await response.json() : null;
