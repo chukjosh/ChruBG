@@ -2,3 +2,5 @@ models/
 .vercel/
 __pycache__/
 public/models/
+config.bat
+node_modules
