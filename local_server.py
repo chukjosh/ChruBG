@@ -22,6 +22,11 @@ class LocalServerHandler(api_handler, SimpleHTTPRequestHandler):
     def __init__(self, *arguments, **keyword_arguments):
         super().__init__(*arguments, directory=PUBLIC_DIRECTORY, **keyword_arguments)
 
+    def end_headers(self):
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+        super().end_headers()
+
     def is_api_request(self):
         return self.path.split("?")[0] == API_PATH
 

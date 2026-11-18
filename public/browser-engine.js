@@ -13,8 +13,10 @@ function loadOnnxRuntime() {
     const scriptElement = document.createElement("script");
     scriptElement.src = ONNX_RUNTIME_WEB_URL;
     scriptElement.onload = () => {
+      ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/";
       usingWebGpu = Boolean(navigator.gpu);
-      ort.env.wasm.proxy = !usingWebGpu; // the processor path runs in a worker so the page stays responsive
+      // Proxy worker requires cross-origin isolation (SharedArrayBuffer)
+      ort.env.wasm.proxy = Boolean(window.crossOriginIsolated) && !usingWebGpu;
       resolve();
     };
     scriptElement.onerror = () => reject(new Error("The in-browser engine could not be loaded. Check your connection or use the server."));
